@@ -1,10 +1,14 @@
 "use client";
 import DashboardSidebar from "@/app/components/DashboardSidebar";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AccountPage() {
   const BACKEND = "http://127.0.0.1:5000";
   const [user, setUser] = useState<{ id?: number; name?: string; email?: string } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     try {
@@ -39,11 +43,43 @@ export default function AccountPage() {
             <div className="mt-8 flex gap-4">
               <a href="/roadmap" className="px-6 py-3 rounded-xl border border-white/10 hover:bg-white/5">Back to Dashboard</a>
               <button onClick={() => { localStorage.removeItem("authUser"); window.location.href = "/login"; }} className="px-6 py-3 rounded-xl bg-red-500 text-black font-bold hover:bg-red-400">Logout</button>
+              <button onClick={() => setConfirmDelete(true)} className="px-6 py-3 rounded-xl bg-[#111] border border-red-500 text-red-400 font-bold hover:bg-red-500/10">Delete Account</button>
             </div>
           </div>
+
+          {confirmDelete && (
+            <div className="bg-[#0a0a0a] border border-red-500 rounded-2xl p-6">
+              <p className="text-red-400 font-bold mb-4">Are you sure you want to permanently delete your account?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    if (!user?.email && !user?.id) { setConfirmDelete(false); return; }
+                    setDeleting(true);
+                    try {
+                      const res = await fetch(`${BACKEND}/delete-account`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: user?.email, id: user?.id }),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        localStorage.removeItem("authUser");
+                        router.push("/signup");
+                      }
+                    } catch {}
+                    finally { setDeleting(false); setConfirmDelete(false); }
+                  }}
+                  disabled={deleting}
+                  className={`px-6 py-3 rounded-xl font-bold ${deleting ? "bg-[#333]" : "bg-red-600 hover:bg-red-500"} text-black`}
+                >
+                  {deleting ? "Deleting..." : "Yes, Delete"}
+                </button>
+                <button onClick={() => setConfirmDelete(false)} className="px-6 py-3 rounded-xl bg-[#111] border border-white/10">Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
   );
 }
-

@@ -3,7 +3,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from recognizer import FaceProctor
 from dss_engine import LearningPathDSS
-from config import DB_PATH
+from config import DB_PATH, DATASET_DIR
+import os
+import shutil
 import sqlite3
 import json
 from datetime import datetime
@@ -89,6 +91,25 @@ def verify():
     image_b64 = data['image']
     result = proctor.verify(image_b64, user_id)
     return jsonify(result)
+
+@app.route("/login-face", methods=["POST"])
+def login_face():
+    data = request.json
+    image_b64 = data.get("image") or data.get("video")
+    if not image_b64:
+        return jsonify({"success": False, "error": "invalid_input"}), 400
+    ident = getattr(proctor, "identify", None)
+    if ident is None:
+        return jsonify({"success": False, "error": "identify_not_available"}), 500
+    result = ident(image_b64)
+    if not result.get("success"):
+        return jsonify({"success": False, "error": "not_recognized"}), 401
+    uid = result.get("user_id")
+    with get_db() as conn:
+        row = conn.execute("SELECT id, name, email FROM users WHERE email = ? OR id = ?", (uid, uid)).fetchone()
+    if not row:
+        return jsonify({"success": False, "error": "user_not_found"}), 404
+    return jsonify({"success": True, "user": {"id": row[0], "name": row[1], "email": row[2]}})
 
 @app.route("/submit-exam", methods=["POST"])
 def submit_exam():
@@ -253,6 +274,40 @@ def submissions():
             item["recommendations"] = []
         data.append(item)
     return jsonify({"items": data})
+
+@app.route("/delete-account", methods=["POST"])
+def delete_account():
+    data = request.json
+    uid = data.get("id")
+    email = (data.get("email") or "").lower()
+    with get_db() as conn:
+        if email:
+            row = conn.execute("SELECT id, email FROM users WHERE email = ?", (email,)).fetchone()
+        elif uid:
+            row = conn.execute("SELECT id, email FROM users WHERE id = ?", (uid,)).fetchone()
+        else:
+            row = None
+    if not row:
+        return jsonify({"success": False, "error": "not_found"}), 404
+    user_id, user_email = row[0], row[1]
+    with get_db() as conn:
+        conn.execute("DELETE FROM course_progress WHERE user_id = ? OR user_id = ?", (user_email, str(user_id)))
+        conn.execute("DELETE FROM exam_submissions WHERE user_id = ? OR user_id = ?", (user_email, str(user_id)))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+    for key in [user_email, str(user_id)]:
+        if key:
+            folder = os.path.join(DATASET_DIR, key)
+            if os.path.isdir(folder):
+                try:
+                    shutil.rmtree(folder)
+                except Exception:
+                    pass
+    try:
+        proctor.train_model()
+    except Exception:
+        pass
+    return jsonify({"success": True})
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)

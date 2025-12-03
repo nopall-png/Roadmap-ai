@@ -43,3 +43,5 @@ next-env.d.ts
 backend-ai/database.sqlite3
 backend-ai/__pycache__/
 *.pyc
+backend-ai/dataset/
+backend-ai/training.xml

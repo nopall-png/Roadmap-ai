@@ -84,7 +84,7 @@ export default function AssessmentsPage() {
                   <p className="text-lg font-semibold">{doneCount}/{modules.length} modules completed</p>
                 </div>
                 <button
-                  onClick={() => { if (allCompleted) router.push("/assessments/verify"); }}
+                  onClick={() => { if (allCompleted) router.push("/assessments/exam"); }}
                   disabled={!allCompleted}
                   className={`px-6 py-3 rounded-xl font-bold ${allCompleted ? "bg-[#FF6B00] hover:bg-[#ff8533] text-black" : "bg-[#333] text-[#888] cursor-not-allowed"}`}
                 >

@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Webcam from "react-webcam";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -9,6 +10,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const BACKEND = "http://127.0.0.1:5000";
+  const [faceMode, setFaceMode] = useState(false);
+  const [faceLoading, setFaceLoading] = useState(false);
+  const webcamRef = useRef<Webcam>(null);
 
   const onLogin = async () => {
     setLoading(true);
@@ -31,6 +35,36 @@ export default function LoginPage() {
       setError("Server unreachable");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onLoginFace = async () => {
+    setError("");
+    setFaceLoading(true);
+    try {
+      const shot = webcamRef.current?.getScreenshot();
+      if (!shot) {
+        setError("Camera not ready");
+        setFaceLoading(false);
+        return;
+      }
+      const res = await fetch(`${BACKEND}/login-face`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: shot }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "Face login failed");
+        setFaceLoading(false);
+        return;
+      }
+      localStorage.setItem("authUser", JSON.stringify(data.user));
+      router.push("/dashboard");
+    } catch {
+      setError("Server unreachable");
+    } finally {
+      setFaceLoading(false);
     }
   };
 
@@ -61,6 +95,25 @@ export default function LoginPage() {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
+          <div className="h-px bg-white/10" />
+          <button
+            onClick={() => setFaceMode(!faceMode)}
+            className="w-full px-6 py-4 rounded-xl font-bold bg-[#111] border border-white/10 text-white"
+          >
+            {faceMode ? "Hide Face Login" : "Login with Face"}
+          </button>
+          {faceMode && (
+            <div className="space-y-3">
+              <Webcam ref={webcamRef} audio={false} screenshotFormat="image/jpeg" className="w-full aspect-video rounded-xl" videoConstraints={{ facingMode: "user" }} />
+              <button
+                onClick={onLoginFace}
+                disabled={faceLoading}
+                className={`w-full px-6 py-4 rounded-xl font-bold ${faceLoading ? "bg-[#333]" : "bg-[#FF6B00] hover:bg-[#ff8533]"} text-black`}
+              >
+                {faceLoading ? "Verifying..." : "Login with Face"}
+              </button>
+            </div>
+          )}
           <button
             onClick={() => router.push("/signup")}
             className="w-full px-6 py-4 rounded-xl font-bold bg-[#111] border border-white/10 text-white"
