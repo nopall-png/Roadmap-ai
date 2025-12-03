@@ -43,26 +43,26 @@ const useExamStore = create<ExamStore>((set) => ({
 }));
 
 const questions = [
-  { question: "What is the time complexity of binary search in a sorted array?", options: ["O(n)", "O(log n)", "O(n log n)", "O(1)"], correct: 1 },
-  { question: "Which data structure uses LIFO principle?", options: ["Queue", "Stack", "Array", "Linked List"], correct: 1 },
-  { question: "In a binary search tree, the in-order traversal gives nodes in:", options: ["Random order", "Ascending order", "Descending order", "Level order"], correct: 1 },
-  { question: "What is the best case time complexity of QuickSort?", options: ["O(n²)", "O(n log n)", "O(n)", "O(log n)"], correct: 1 },
-  { question: "Which sorting algorithm is stable?", options: ["QuickSort", "HeapSort", "MergeSort", "SelectionSort"], correct: 2 },
-  { question: "A graph with all vertices having equal degree is called:", options: ["Regular Graph", "Complete Graph", "Bipartite Graph", "Tree"], correct: 0 },
-  { question: "Dijkstra’s algorithm is used for:", options: ["Finding cycles", "Shortest path in weighted graph", "Topological sort", "DFS"], correct: 1 },
-  { question: "What is the space complexity of DFS?", options: ["O(V)", "O(V + E)", "O(E)", "O(1)"], correct: 0 },
-  { question: "HashMap internally uses:", options: ["Array", "LinkedList", "Tree", "Array + Chaining"], correct: 3 },
-  { question: "Dynamic programming uses:", options: ["Greedy", "Divide & Conquer", "Memoization/Tabulation", "Brute Force"], correct: 2 },
-  { question: "Height of complete binary tree with n nodes?", options: ["log n", "n", "n/2", "√n"], correct: 0 },
-  { question: "Which is NOT a self-balancing BST?", options: ["AVL Tree", "Red-Black Tree", "Splay Tree", "Binary Search Tree"], correct: 3 },
-  { question: "Bellman-Ford can handle:", options: ["Negative weights", "Only positive weights", "Disconnected graph", "None"], correct: 0 },
-  { question: "Topological sort only possible for:", options: ["Directed Acyclic Graph", "Undirected Graph", "Cyclic Graph", "Complete Graph"], correct: 0 },
-  { question: "Insert into binary heap?", options: ["O(1)", "O(log n)", "O(n)", "O(n log n)"], correct: 1 },
-  { question: "MST uses:", options: ["Dijkstra", "Floyd-Warshall", "Kruskal / Prim", "BFS"], correct: 2 },
-  { question: "BFS uses:", options: ["Stack", "Queue", "Priority Queue", "Recursion"], correct: 1 },
-  { question: "Fastest sorting in practice?", options: ["MergeSort", "QuickSort", "BubbleSort", "InsertionSort"], correct: 1 },
-  { question: "Cycle in graph?", options: ["Path to itself", "Multiple edges", "Isolated node", "Tree"], correct: 0 },
-  { question: "Edges in complete graph n vertices?", options: ["n", "n-1", "n(n-1)/2", "2n"], correct: 2 },
+  { question: "What is the correct file extension for Python files?", options: [".java", ".py", ".js", ".html"], correct: 1 },
+  { question: "In Python, which function is used to output text to the console?", options: ["print()", "echo()", "console.log()", "System.out.println()"], correct: 0 },
+  { question: "What does \"Big O Notation\" measure in Computer Science?", options: ["Internet speed", "Time and Space Complexity", "The size of the hard drive", "Code readability"], correct: 1 },
+  { question: "Which data structure follows the LIFO (Last In, First Out) principle?", options: ["Queue", "Stack", "Array", "Tree"], correct: 1 },
+  { question: "Accessing an element in an Array by its index has a time complexity of...?", options: ["O(1)", "O(n)", "O(log n)", "O(n^2)"], correct: 0 },
+  { question: "Which HTML tag is used for the largest heading?", options: ["<head>", "<h1>", "<h6>", "<title>"], correct: 1 },
+  { question: "In CSS, which property is used to change the text color?", options: ["text-style", "color", "font-color", "bg-color"], correct: 1 },
+  { question: "What does the CSS \"Box Model\" consist of?", options: ["Header, Main, Footer", "Content, Padding, Border, Margin", "Flex, Grid, Block", "HTML, CSS, JavaScript"], correct: 1 },
+  { question: "In React, what is \"State\"?", options: ["A permanent database storage", "An object that holds data that may change over time", "A CSS class", "A static variable"], correct: 1 },
+  { question: "Which React Hook is used to handle side effects (like fetching data)?", options: ["useState", "useEffect", "useReducer", "useHistory"], correct: 1 },
+  { question: "Node.js is best described as...?", options: ["A frontend framework", "A JavaScript runtime environment built on Chrome's V8 engine", "A relational database", "A text editor"], correct: 1 },
+  { question: "Which command is used to install dependencies in a Node.js project?", options: ["git install", "npm install", "node add", "pip install"], correct: 1 },
+  { question: "In an Express.js API, req.body is used to...?", options: ["Access URL parameters", "Access data sent in a POST/PUT request", "Send a response to the client", "Stop the server"], correct: 1 },
+  { question: "What does SQL stand for?", options: ["Structured Question List", "Structured Query Language", "Simple Query Logic", "Server Query Layout"], correct: 1 },
+  { question: "Which SQL statement is used to retrieve data from a database?", options: ["GET", "SELECT", "FETCH", "PULL"], correct: 1 },
+  { question: "A \"Primary Key\" in a database table must be...?", options: ["Nullable", "Unique for each record", "Duplicate", "Optional"], correct: 1 },
+  { question: "What is the result of 10 // 3 in Python?", options: ["3.333", "3", "1", "10"], correct: 1 },
+  { question: "Which HTTP method is typically used to create a NEW resource?", options: ["GET", "POST", "PUT", "DELETE"], correct: 1 },
+  { question: "What is JSX?", options: ["A JSON file", "A syntax extension for JavaScript that looks like HTML", "A Java library", "A CSS preprocessor"], correct: 1 },
+  { question: "Which sorting algorithm typically has the worst performance (O(n^2))?", options: ["Bubble Sort", "Merge Sort", "Quick Sort", "Tim Sort"], correct: 0 },
 ];
 
 interface BBox {
@@ -94,7 +94,15 @@ export default function ExamPage() {
   } = useExamStore();
 
   const answeredCount = answers.filter(Boolean).length;
-  const userId = "alex123";
+  const userId = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+      const u = raw ? JSON.parse(raw) : null;
+      return u?.email || String(u?.id) || "guest";
+    } catch {
+      return "guest";
+    }
+  })();
 
   // Alarm
   const playAlarm = () => {
@@ -123,7 +131,8 @@ export default function ExamPage() {
     const score = answers.reduce((acc, ans, i) => (ans === questions[i].correct.toString() ? acc + 1 : acc), 0);
 
     try {
-      await fetch("http://localhost:5000/submit-exam", {
+      const BACKEND = "http://127.0.0.1:5000";
+      await fetch(`${BACKEND}/submit-exam`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -142,11 +151,12 @@ export default function ExamPage() {
   // Proctoring
   useEffect(() => {
     const interval = setInterval(async () => {
-      const screenshot = webcamRef.current?.getScreenshot();
+      const screenshot = webcamRef.current?.getScreenshot() || null as string | null;
       if (!screenshot) return;
 
       try {
-        const res = await fetch("http://localhost:5000/verify", {
+        const BACKEND = "http://127.0.0.1:5000";
+        const res = await fetch(`${BACKEND}/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, image: screenshot }),
@@ -198,177 +208,149 @@ export default function ExamPage() {
     draw();
   }, [bboxes]);
 
+  const flaggedCount = flags.filter(Boolean).length;
+  const remainingCount = TOTAL_QUESTIONS - answeredCount;
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-black text-white flex">
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex">
       <DashboardSidebar />
 
-      <div className="flex-1 flex gap-8 p-8">
-        {/* MAIN QUESTION AREA */}
-        <div className="flex-1 max-w-5xl">
-          <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-12 shadow-2xl">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-12">
-              <div>
-                <h1 className="text-5xl font-black bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">
-                  DSA Assessment
-                </h1>
-                <p className="text-2xl text-gray-400 mt-3">
-                  Question <span className="text-orange-400 font-bold">{currentQuestion + 1}</span> of {TOTAL_QUESTIONS}
-                </p>
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => router.push("/assessments")}
+              className="text-[#888] hover:text-white flex items-center gap-2"
+            >
+              <span className="text-xl">←</span>
+              <span className="font-semibold">Exit Test</span>
+            </button>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Data Structures & Algorithms Assessment</h1>
+              <p className="text-[#888]">Question {currentQuestion + 1} of {TOTAL_QUESTIONS}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-[#1a1a1a] border border-[#333]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#FF6B00" strokeWidth="2"/><path d="M12 7v6l4 2" stroke="#FF6B00" strokeWidth="2" strokeLinecap="round"/></svg>
+                <span className="text-[#FF6B00] font-bold">{formatTime(timeLeft)}</span>
               </div>
-              <div className="bg-gradient-to-r from-orange-600 to-pink-600 text-black font-black text-5xl px-10 py-5 rounded-3xl shadow-2xl">
-                {formatTime(timeLeft)}
+              <button
+                onClick={handleSubmit}
+                className="px-5 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#ff8533] text-black font-bold"
+              >
+                Submit Test
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-8">
+            <div>
+              <div className="text-[#888] mb-3 flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+                  disabled={currentQuestion === 0}
+                  className={`flex items-center gap-2 ${currentQuestion === 0 ? "opacity-50" : "hover:text-white"}`}
+                >
+                  <span className="text-xl">←</span>
+                  <span>Previous</span>
+                </button>
+              </div>
+              <div className="bg-[#0b0b0b] border border-[#1a1a1a] rounded-2xl p-8">
+                <div className="text-[#FF6B00] text-sm font-bold mb-2">QUESTION {currentQuestion + 1}</div>
+                <h2 className="text-2xl font-semibold mb-6">{questions[currentQuestion].question}</h2>
+                <div className="space-y-4">
+                  {questions[currentQuestion].options.map((opt, i) => {
+                    const selected = answers[currentQuestion] === i.toString();
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setAnswer(currentQuestion, i.toString())}
+                        className={`w-full text-left px-6 py-5 rounded-xl border ${selected ? "border-[#FF6B00] bg-[#111]" : "border-[#222] bg-[#0a0a0a] hover:border-[#444]"}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-6 h-6 rounded-full border ${selected ? "border-[#FF6B00]" : "border-[#555]"} flex items-center justify-center`}> 
+                            <div className={`w-3 h-3 rounded-full ${selected ? "bg-[#FF6B00]" : "bg-transparent"}`} />
+                          </div>
+                          <span className="text-[#888] font-semibold w-6">{String.fromCharCode(65 + i)}</span>
+                          <span className="flex-1">{opt}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Question */}
-            <h2 className="text-4xl font-bold leading-relaxed mb-16 text-left text-white">
-              {questions[currentQuestion].question}
-            </h2>
-
-            {/* Options */}
-            <div className="space-y-8">
-              {questions[currentQuestion].options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => setAnswer(currentQuestion, i.toString())}
-                  className={`w-full text-left p-10 rounded-3xl border-2 transition-all duration-300 text-2xl font-medium group
-                    ${answers[currentQuestion] === i.toString()
-                      ? "bg-gradient-to-r from-orange-500 to-pink-600 border-transparent text-black shadow-2xl transform scale-[1.02]"
-                      : "bg-white/5 border-white/20 hover:border-orange-500/60 hover:bg-white/10"
-                    }`}
-                >
-                  <div className="flex items-center gap-10">
-                    <div
-                      className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl font-black transition-all
-                        ${answers[currentQuestion] === i.toString()
-                          ? "bg-black text-white"
-                          : "bg-white/10 text-white border-4 border-white/40 group-hover:border-orange-500"
-                        }`}
-                    >
-                      {String.fromCharCode(65 + i)}
-                    </div>
-                    <span className="flex-1">{opt}</span>
+            <div className="space-y-6">
+              <div className="bg-[#0b0b0b] border border-[#FF6B00] rounded-2xl overflow-hidden">
+                <div className="relative">
+                  <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{ facingMode: "user" }}
+                    className="w-full aspect-video object-cover"
+                  />
+                  <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
+                  <div className="absolute top-2 left-2 px-3 py-1 rounded-full bg-black/60 border border-[#1a1a1a] text-xs font-bold flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-400" />
+                    <span>LIVE</span>
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+                <div className="p-4 flex justify-end">
+                  {currentQuestion === TOTAL_QUESTIONS - 1 ? (
+                    <button onClick={handleSubmit} className="px-4 py-2 rounded-lg bg-[#FF6B00] hover:bg-[#ff8533] text-black font-bold">Submit</button>
+                  ) : (
+                    <button onClick={() => setCurrentQuestion(currentQuestion + 1)} className="px-4 py-2 rounded-lg bg-[#FF6B00] hover:bg-[#ff8533] text-black font-bold">Next →</button>
+                  )}
+                </div>
+              </div>
 
-            {/* Navigation */}
-            <div className="flex justify-between items-center mt-20">
-              <button
-                onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
-                disabled={currentQuestion === 0}
-                className="px-12 py-6 bg-white/10 hover:bg-white/20 rounded-2xl disabled:opacity-50 text-2xl font-bold transition"
-              >
-                ← Previous
-              </button>
+              <div className="bg-[#0b0b0b] border border-[#1a1a1a] rounded-2xl p-6">
+                <h3 className="text-sm font-bold text-[#888] mb-4">Test Progress</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[#888]">Completed</span>
+                  <span className="font-semibold">{answeredCount}/{TOTAL_QUESTIONS}</span>
+                </div>
+                <div className="h-2 rounded-full bg-[#111]">
+                  <div className="h-2 rounded-full bg-[#FF6B00]" style={{ width: `${(answeredCount / TOTAL_QUESTIONS) * 100}%` }} />
+                </div>
+              </div>
 
-              <button
-                onClick={() => toggleFlag(currentQuestion)}
-                className={`px-10 py-6 rounded-2xl font-bold text-xl transition
-                  ${flags[currentQuestion]
-                    ? "bg-yellow-500 text-black shadow-lg"
-                    : "bg-white/10 hover:bg-white/20"
-                  }`}
-              >
-                {flags[currentQuestion] ? "FLAGGED" : "FLAG FOR REVIEW"}
-              </button>
+              <div className="bg-[#0b0b0b] border border-[#1a1a1a] rounded-2xl p-6">
+                <h3 className="text-sm font-bold text-[#888] mb-4">Question Navigator</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-green-500" /> <span className="text-xs text-[#888]">Answered</span></div>
+                  <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-yellow-500" /> <span className="text-xs text-[#888]">Flagged</span></div>
+                  <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-[#333]" /> <span className="text-xs text-[#888]">Unanswered</span></div>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {Array.from({ length: TOTAL_QUESTIONS }, (_, i) => {
+                    const isAnswered = answers[i] !== null;
+                    const isFlagged = flags[i];
+                    const isCurrent = i === currentQuestion;
+                    const base = isCurrent ? "bg-[#FF6B00] text-black" : isFlagged ? "bg-yellow-500 text-black" : isAnswered ? "bg-green-500 text-black" : "bg-[#222] text-[#888]";
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentQuestion(i)}
+                        className={`h-12 rounded-lg font-bold ${base}`}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-              {currentQuestion === TOTAL_QUESTIONS - 1 ? (
-                <button
-                  onClick={handleSubmit}
-                  className="px-20 py-7 bg-gradient-to-r from-orange-500 to-pink-600 text-black text-3xl font-black rounded-3xl hover:scale-110 transition-all shadow-2xl"
-                >
-                  SUBMIT EXAM
-                </button>
-              ) : (
-                <button
-                  onClick={() => setCurrentQuestion(currentQuestion + 1)}
-                  className="px-16 py-6 bg-gradient-to-r from-orange-500 to-orange-400 text-black font-bold text-2xl rounded-2xl hover:scale-105 transition shadow-xl"
-                >
-                  Next Question →
-                </button>
-              )}
+              <div className="bg-[#0b0b0b] border border-[#1a1a1a] rounded-2xl p-6 flex items-center justify-between">
+                <div className="text-center"><div className="text-2xl font-bold">{answeredCount}</div><div className="text-[#888] text-sm">Answered</div></div>
+                <div className="text-center"><div className="text-2xl font-bold">{flaggedCount}</div><div className="text-[#888] text-sm">Flagged</div></div>
+                <div className="text-center"><div className="text-2xl font-bold">{remainingCount}</div><div className="text-[#888] text-sm">Remaining</div></div>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* RIGHT SIDEBAR */}
-        <aside className="w-96 space-y-8 overflow-y-auto">
-          {/* Progress */}
-          <div className="bg-black/40 backdrop-blur-2xl rounded-3xl p-8 border border-white/10">
-            <h3 className="text-3xl font-bold text-orange-400 mb-6">Progress</h3>
-            <div className="text-7xl font-black text-green-400">
-              {answeredCount}<span className="text-4xl text-gray-500">/{TOTAL_QUESTIONS}</span>
-            </div>
-            <div className="mt-6 h-8 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-1000"
-                style={{ width: `${(answeredCount / TOTAL_QUESTIONS) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Navigator */}
-          <div className="bg-black/40 backdrop-blur-2xl rounded-3xl p-8 border border-white/10">
-            <h3 className="text-3xl font-bold text-orange-400 mb-8">Jump to Question</h3>
-            <div className="grid grid-cols-5 gap-4">
-              {Array.from({ length: 20 }, (_, i) => {
-                const isAnswered = answers[i] !== null;
-                const isFlagged = flags[i];
-                const isCurrent = i === currentQuestion;
-
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentQuestion(i)}
-                    className={`aspect-square rounded-2xl font-bold text-2xl transition-all
-                      ${isCurrent ? "ring-4 ring-orange-500 ring-offset-4 ring-offset-transparent scale-110 shadow-2xl" : ""}
-                      ${isAnswered && isFlagged ? "bg-yellow-500 text-black" :
-                        isAnswered ? "bg-green-500 text-black" :
-                        isFlagged ? "bg-yellow-600/40 text-yellow-300 border-2 border-yellow-500" :
-                        "bg-gray-800 text-gray-500 hover:bg-gray-700"
-                      }`}
-                  >
-                    {i + 1}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Camera */}
-          <div className="bg-black/40 backdrop-blur-2xl rounded-3xl overflow-hidden border-4 border-orange-500 shadow-2xl">
-            <div className="bg-gradient-to-r from-orange-600 to-pink-600 text-black font-black text-center py-5 text-2xl">
-              LIVE AI PROCTORING
-            </div>
-            <div className="relative">
-              <Webcam
-                ref={webcamRef}
-                audio={false}
-                screenshotFormat="image/jpeg"
-                videoConstraints={{ facingMode: "user" }}
-                className="w-full aspect-video object-cover"
-              />
-              <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
-
-              <div className={`absolute top-6 left-6 px-8 py-4 rounded-full font-black text-3xl shadow-2xl
-                ${proctorStatus === "safe" ? "bg-green-600" :
-                  proctorStatus === "warning" ? "bg-yellow-600 animate-pulse" :
-                  "bg-red-600 animate-pulse"
-                }`}>
-                {proctorStatus === "safe" ? "SECURE" : proctorStatus.toUpperCase()}
-              </div>
-
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/80 px-8 py-4 rounded-full flex items-center gap-4">
-                <div className="w-5 h-5 bg-red-500 rounded-full animate-pulse" />
-                <span className="font-bold text-red-400 text-xl">RECORDING LIVE</span>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
+      </main>
     </div>
   );
 }

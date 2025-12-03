@@ -2,41 +2,181 @@
 "use client";
 
 import DashboardSidebar from "@/app/components/DashboardSidebar";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { courseCatalog } from "@/app/lib/catalog";
 
 export default function CourseModulePage() {
   const searchParams = useSearchParams();
-  const module = searchParams.get("module") || "3";
-  const title = decodeURIComponent(searchParams.get("title") || "Data Structures & Algorithms");
+  const router = useRouter();
+  const moduleId = searchParams.get("module") || "1";
+  const title = decodeURIComponent(searchParams.get("title") || "Python Basics");
+  const lessonParam = decodeURIComponent(searchParams.get("lesson") || "");
 
-  // Lesson saat ini (misal: Array Data Structure)
-  const currentLessonIndex = 4; // Index 4 = Array Data Structure (sesuai Figma)
+  const catalog = courseCatalog;
 
-  const lessons = [
-    { title: "Introduction to Algorithms", duration: "12:30", completed: true },
-    { title: "Big O Notation Basics", duration: "18:45", completed: true },
-    { title: "Time Complexity Analysis", duration: "22:15", completed: true },
-    { title: "Space Complexity", duration: "15:20", completed: true },
-    { title: "Array Data Structure", duration: "25:40", completed: false, active: true },
-    { title: "Linked Lists Fundamentals", duration: "28:30", completed: false },
-    { title: "Stacks and Queues", duration: "32:15", completed: false },
-    { title: "Hash Tables Deep Dive", duration: "35:20", completed: false },
-    { title: "Trees and Binary Search Trees", duration: "40:10", completed: false },
-    { title: "Graph Representations", duration: "30:25", completed: false },
-    { title: "Breadth-First Search (BFS)", duration: "26:50", completed: false },
-    { title: "Depth-First Search (DFS)", duration: "28:15", completed: false },
-    { title: "Sorting Algorithms - Part 1", duration: "35:40", completed: false },
-    { title: "Sorting Algorithms - Part 2", duration: "38:20", completed: false },
-    { title: "Searching Algorithms", duration: "22:30", completed: false },
-    { title: "Dynamic Programming Intro", duration: "45:15", completed: false },
-    { title: "Greedy Algorithms", duration: "32:40", completed: false },
-    { title: "Divide and Conquer", duration: "29:55", completed: false },
-    { title: "Backtracking Techniques", duration: "36:20", completed: false },
-    { title: "Algorithm Practice & Review", duration: "50:00", completed: false },
-  ];
+  const data = catalog[title] || catalog["Python Basics"];
+  const lessons = data.lessons.map((l, i) => ({ ...l, ts: l.ts ?? i * 300 }));
+  const makeEmbed = (url: string) => {
+    try {
+      const u = new URL(url);
+      const vid = u.searchParams.get("v");
+      const list = u.searchParams.get("list");
+      if (u.hostname.includes("youtube.com") && vid) {
+        const qs = new URLSearchParams();
+        if (list) qs.set("list", list);
+        const q = qs.toString();
+        return `https://www.youtube.com/embed/${vid}${q ? `?${q}` : ""}`;
+      } else if (u.hostname.includes("youtu.be")) {
+        const pathId = u.pathname.replace("/", "");
+        const qs = new URLSearchParams();
+        const q = qs.toString();
+        return `https://www.youtube.com/embed/${pathId}${q ? `?${q}` : ""}`;
+      }
+    } catch {}
+    return "";
+  };
+  const baseEmbed = makeEmbed(data.video);
+  const initialSrc = baseEmbed ? `${baseEmbed}?enablejsapi=1&origin=http://localhost:3000` : "";
+  const [embedSrc, setEmbedSrc] = useState<string>(initialSrc);
+  const [activeIndex, setActiveIndex] = useState<number>(() => {
+    const idx = lessons.findIndex((l) => l.active);
+    return idx >= 0 ? idx : 0;
+  });
+  const activeLesson = lessons[activeIndex];
+  const playerRef = useRef<any>(null);
+  const [playerReady, setPlayerReady] = useState<boolean>(false);
+  useEffect(() => {
+    if (!baseEmbed) return;
+    const t = document.createElement("script");
+    t.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(t);
+    (window as any).onYouTubeIframeAPIReady = () => {
+      playerRef.current = new (window as any).YT.Player("yt-player", {
+        events: {
+          onReady: () => setPlayerReady(true),
+        },
+      });
+    };
+  }, [baseEmbed]);
+  const seekTo = (s: number) => {
+    if (playerReady && playerRef.current && typeof playerRef.current.seekTo === "function") {
+      try {
+        playerRef.current.seekTo(s, true);
+        if (typeof playerRef.current.playVideo === "function") playerRef.current.playVideo();
+        return;
+      } catch {}
+    }
+    if (baseEmbed) {
+      const sep = initialSrc.includes("?") ? "&" : "?";
+      setEmbedSrc(`${initialSrc}${sep}start=${Math.max(0, Math.floor(s))}&autoplay=1`);
+    }
+  };
+  const handleSelectLesson = (i: number) => {
+    setActiveIndex(i);
+    const ts = lessons[i]?.ts || 0;
+    seekTo(ts);
+    reportProgress(false);
+  };
+  const [initializedFromParam, setInitializedFromParam] = useState(false);
+  useEffect(() => {
+    if (!initializedFromParam && lessonParam) {
+      const idx = lessons.findIndex((l) => l.title.toLowerCase() === lessonParam.toLowerCase());
+      if (idx >= 0) {
+        setInitializedFromParam(true);
+        handleSelectLesson(idx);
+      }
+    }
+  }, [lessonParam, lessons.length]);
+  const goPrev = () => {
+    if (activeIndex > 0) handleSelectLesson(activeIndex - 1);
+  };
+  const completeModule = async () => {
+    for (let i = 0; i < lessons.length; i++) {
+      const payload = {
+        user_id: userId,
+        module_title: moduleTitle,
+        lesson_index: i,
+        lesson_title: lessons[i]?.title || "",
+        completed: 1,
+        last_position: (lessons[i]?.ts || 0) + 30,
+      };
+      try {
+        await fetch(`${BACKEND}/progress/update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch {}
+    }
+  };
+  const markCompleteAndNext = async () => {
+    await reportProgress(true);
+    if (activeIndex < lessons.length - 1) {
+      handleSelectLesson(activeIndex + 1);
+    } else {
+      await completeModule();
+      router.push("/roadmap");
+    }
+  };
+  const BACKEND = "http://127.0.0.1:5000";
+  const rawUser = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+  const authUser = rawUser ? JSON.parse(rawUser) : null;
+  const userId = authUser?.email || String(authUser?.id) || "guest";
+  const moduleTitle = title;
+  const [completedSet, setCompletedSet] = useState<Set<number>>(new Set());
+  const [reportedSet, setReportedSet] = useState<Set<number>>(new Set());
+  const loadProgress = async () => {
+    try {
+      const url = `${BACKEND}/progress?user_id=${encodeURIComponent(userId)}&module_title=${encodeURIComponent(moduleTitle)}&limit=200`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const c = new Set<number>();
+      const r = new Set<number>();
+      for (const it of data.items || []) {
+        if (it.completed) c.add(it.lesson_index);
+        r.add(it.lesson_index);
+      }
+      setCompletedSet(c);
+      setReportedSet(r);
+    } catch {}
+  };
+  useEffect(() => { loadProgress(); }, []);
+  const reportProgress = async (autoComplete: boolean) => {
+    const idx = activeIndex;
+    const pos = playerReady && playerRef.current && typeof playerRef.current.getCurrentTime === "function" ? playerRef.current.getCurrentTime() : 0;
+    const payload = {
+      user_id: userId,
+      module_title: moduleTitle,
+      lesson_index: idx,
+      lesson_title: lessons[idx]?.title || "",
+      completed: autoComplete ? 1 : 0,
+      last_position: pos,
+    };
+    try {
+      await fetch(`${BACKEND}/progress/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (autoComplete) {
+        const c = new Set(completedSet);
+        c.add(idx);
+        setCompletedSet(c);
+      }
+      const r = new Set(reportedSet);
+      r.add(idx);
+      setReportedSet(r);
+    } catch {}
+  };
+  useEffect(() => {
+    const h = setInterval(() => {
+      const t = playerReady && playerRef.current && typeof playerRef.current.getCurrentTime === "function" ? playerRef.current.getCurrentTime() : 0;
+      let idx = activeIndex;
+      const ts = lessons[idx]?.ts || 0;
+      if (t >= ts + 30 && !completedSet.has(idx)) reportProgress(true);
+    }, 3000);
+    return () => clearInterval(h);
+  }, [playerReady, activeIndex, completedSet]);
 
-  const completedCount = lessons.filter(l => l.completed).length;
+  const completedCount = completedSet.size;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex">
@@ -54,23 +194,29 @@ export default function CourseModulePage() {
             <div className="lg:col-span-2 space-y-8">
               {/* Video Player */}
               <div className="relative rounded-2xl overflow-hidden bg-[#111] border border-white/10">
-                <div className="aspect-video bg-gradient-to-br from-[#222] to-[#111] flex items-center justify-center">
-                  <div className="w-20 h-20 bg-[#FF6B00] rounded-full flex items-center justify-center shadow-[0_25px_50px_-12px_rgba(255,107,0,0.5)] hover:scale-110 transition cursor-pointer">
-                    <svg className="w-10 h-10 ml-2" fill="black" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7L8 5z" />
-                    </svg>
+                {baseEmbed ? (
+                  <iframe
+                    id="yt-player"
+                    src={embedSrc}
+                    className="w-full aspect-video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={title}
+                  />
+                ) : (
+                  <div className="aspect-video bg-gradient-to-br from-[#222] to-[#111] flex items-center justify-center">
+                    <a href={data.video} target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-xl bg-[#FF6B00] text-black font-bold">
+                      Open Video
+                    </a>
                   </div>
-                </div>
-                <div className="absolute bottom-4 left-4 bg-black/80 px-3 py-1.5 rounded-lg text-sm font-semibold">
-                  25:40
-                </div>
+                )}
               </div>
 
               {/* Title & Actions */}
               <div className="flex justify-between items-start">
                 <div>
-                  <h1 className="text-4xl font-bold">Array Data Structure</h1>
-                  <p className="text-[#888] mt-2">Lesson 5 of 20 • Duration: 25:40</p>
+                  <h1 className="text-4xl font-bold">{title}</h1>
+                  <p className="text-[#888] mt-2">Lesson {activeIndex + 1} of {lessons.length} • Duration: {activeLesson?.duration || "-"}</p>
                 </div>
                 <div className="flex gap-4">
                   <button className="flex items-center gap-3 px-6 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition">
@@ -104,10 +250,10 @@ export default function CourseModulePage() {
 
               {/* Bottom Navigation */}
               <div className="flex justify-between mt-10">
-                <button className="px-10 py-4 border border-white/10 rounded-xl hover:bg-white/5 font-medium transition">
+                <button onClick={goPrev} className="px-10 py-4 border border-white/10 rounded-xl hover:bg-white/5 font-medium transition">
                   ← Previous Lesson
                 </button>
-                <button className="px-10 py-4 bg-[#FF6B00] hover:bg-[#ff8533] text-black rounded-xl font-bold transition shadow-lg">
+                <button onClick={markCompleteAndNext} className="px-10 py-4 bg-[#FF6B00] hover:bg-[#ff8533] text-black rounded-xl font-bold transition shadow-lg">
                   Mark Complete & Continue →
                 </button>
               </div>
@@ -122,39 +268,46 @@ export default function CourseModulePage() {
                 </div>
 
                 <div className="space-y-2 max-h-[700px] overflow-y-auto">
-                  {lessons.map((lesson, index) => (
-                    <button
-                      key={index}
-                      className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 ${
-                        lesson.active
-                          ? "bg-gradient-to-r from-[#FF6B00]/10 to-transparent border border-[#FF6B00]/50 shadow-lg"
-                          : lesson.completed
-                          ? "bg-[#00ff880d] border border-[#00ff88]/20 hover:bg-[#00ff88]/10"
-                          : "hover:bg-white/5 border border-transparent"
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        lesson.active ? "bg-[#FF6B00]" : lesson.completed ? "bg-[#00ff88]/20" : "bg-[#333]"
-                      }`}>
-                        {lesson.completed ? (
-                          <svg className="w-5 h-5 text-[#00ff88]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
-                        ) : lesson.active ? (
-                          <div className="w-3 h-3 bg-black rounded-full"/>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className={`font-medium ${lesson.active ? "text-[#FF6B00]" : "text-white"}`}>
-                          {lesson.title}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-[#888] mt-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                          {lesson.duration}
+                  {lessons.map((lesson, index) => {
+                    const isCompleted = completedSet.has(index);
+                    const isActive = index === activeIndex;
+                    const itemClass = isActive
+                      ? "bg-gradient-to-r from-[#FF6B00]/10 to-transparent border border-[#FF6B00]/50 shadow-lg"
+                      : isCompleted
+                      ? "bg-[#00ff880d] border border-[#00ff88]/20 hover:bg-[#00ff88]/10"
+                      : "hover:bg-white/5 border border-transparent";
+                    const indicatorClass = isActive
+                      ? "bg-[#FF6B00]"
+                      : isCompleted
+                      ? "bg-[#00ff88]/20"
+                      : "bg-[#333]";
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleSelectLesson(index)}
+                        className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-4 ${itemClass}`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${indicatorClass}`}>
+                          {isCompleted ? (
+                            <svg className="w-5 h-5 text-[#00ff88]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
+                          ) : isActive ? (
+                            <div className="w-3 h-3 bg-black rounded-full"/>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          )}
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                        <div className="flex-1">
+                          <p className={`font-medium ${isActive ? "text-[#FF6B00]" : "text-white"}`}>
+                            {lesson.title}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-[#888] mt-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {lesson.duration || ""}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>

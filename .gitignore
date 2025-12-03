@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# backend sqlite database and caches
+backend-ai/database.sqlite3
+backend-ai/__pycache__/
+*.pyc

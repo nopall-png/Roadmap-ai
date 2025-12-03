@@ -4,9 +4,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
+  const [user, setUser] = useState<{ id?: number; name?: string; email?: string } | null>(null);
+  const BACKEND = "http://127.0.0.1:5000";
 
   const navItems = [
     { label: "My Career Path", href: "/career-path", icon: "/icons/test.svg" },
@@ -23,6 +26,43 @@ export default function DashboardSidebar() {
       return pathname.startsWith("/assessments") && pathname !== "/assessments/notes";
     }
     return pathname.startsWith(href);
+  };
+
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+      if (raw) {
+        const u = JSON.parse(raw);
+        setUser(u);
+        const q = u?.id ? `id=${u.id}` : u?.email ? `email=${encodeURIComponent(u.email)}` : "";
+        if (q) {
+          fetch(`${BACKEND}/user?${q}`).then(async (r) => {
+            const data = await r.json();
+            if (data && data.user) setUser(data.user);
+          }).catch(() => {});
+        }
+      }
+    } catch {}
+  }, []);
+
+  const displayName = user?.name || "Guest";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleMenu = () => setMenuOpen((v) => !v);
+  const onLogout = () => {
+    try {
+      localStorage.removeItem("authUser");
+      window.location.href = "/login";
+    } catch {
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -82,16 +122,23 @@ export default function DashboardSidebar() {
         })}
       </nav>
 
-      {/* User Profile */}
       <div className="border-t border-white/5 p-6">
-        <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition cursor-pointer">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6B00] to-[#ff8533] flex items-center justify-center font-bold text-lg shadow-lg">
-            AK
-          </div>
-          <div>
-            <p className="font-semibold text-white">Alex Kim</p>
-            <p className="text-sm text-[#888]">Pro Student</p>
-          </div>
+        <div className="relative">
+          <button onClick={toggleMenu} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6B00] to-[#ff8533] flex items-center justify-center font-bold text-lg shadow-lg">
+              {initials || "U"}
+            </div>
+            <div>
+              <p className="font-semibold text-white">{displayName}</p>
+              <p className="text-sm text-[#888]">Pro Student</p>
+            </div>
+          </button>
+          {menuOpen && (
+            <div className="absolute left-0 right-0 bottom-full mb-2 bg-[#0a0a0a] border border-white/10 rounded-xl shadow-xl z-50">
+              <button onClick={() => { setMenuOpen(false); window.location.href = "/account"; }} className="w-full text-left px-4 py-3 hover:bg-white/5">Account Settings</button>
+              <button onClick={onLogout} className="w-full text-left px-4 py-3 text-red-400 hover:bg-white/5">Logout</button>
+            </div>
+          )}
         </div>
       </div>
     </aside>

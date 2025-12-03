@@ -30,8 +30,17 @@ export default function FaceVerificationPage() {
   const [message, setMessage] = useState("Mohon tunggu...");
   const [progress, setProgress] = useState(0);
   const router = useRouter();
+  const BACKEND = "http://127.0.0.1:5000";
 
-  const userId = "alex123"; // Nanti dari auth
+  const userId = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+      const u = raw ? JSON.parse(raw) : null;
+      return u?.email || String(u?.id) || "guest";
+    } catch {
+      return "guest";
+    }
+  })();
 
   const startRecording = () => {
     setRecording(true);
@@ -76,7 +85,7 @@ export default function FaceVerificationPage() {
     try {
       const videoBase64 = await blobToBase64(blob);
 
-      const res = await fetch("http://localhost:5000/enroll", {
+      const res = await fetch(`${BACKEND}/enroll`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -102,13 +111,18 @@ export default function FaceVerificationPage() {
     }
   };
 
+  const getMirroredScreenshot = async (): Promise<string | null> => {
+    const shot = webcamRef.current?.getScreenshot();
+    return shot || null;
+  };
+
   const checkModelReady = () => {
     const interval = setInterval(async () => {
       try {
-        const screenshot = webcamRef.current?.getScreenshot();
+        const screenshot = await getMirroredScreenshot();
         if (!screenshot) return;
 
-        const res = await fetch("http://localhost:5000/verify", {
+        const res = await fetch(`${BACKEND}/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -136,11 +150,11 @@ export default function FaceVerificationPage() {
 
   useEffect(() => {
     const check = async () => {
-      const screenshot = webcamRef.current?.getScreenshot();
+      const screenshot = await getMirroredScreenshot();
       if (!screenshot) return;
 
       try {
-        const res = await fetch("http://localhost:5000/verify", {
+        const res = await fetch(`${BACKEND}/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

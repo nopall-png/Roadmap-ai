@@ -1,11 +1,13 @@
 "use client";
 
 import DashboardSidebar from "@/app/components/DashboardSidebar";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { courseCatalog } from "@/app/lib/catalog";
 
 export default function RoadmapPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [selectedCareer, setSelectedCareer] = useState<string>("Software Engineer");
 
   useEffect(() => {
@@ -15,28 +17,74 @@ export default function RoadmapPage() {
     }
   }, [searchParams]);
 
-  // DATA ROADMAP — WAJIB ADA DI ATAS RETURN!
-  const roadmapSteps = [
-    { step: 1, title: "Programming Fundamentals", status: "completed" },
-    { step: 2, title: "Object-Oriented Programming", status: "completed" },
-    { step: 3, title: "Data Structures & Algorithms", status: "in-progress" },
-    { step: 4, title: "Web Development Basics", status: "locked" },
-    { step: 5, title: "Frontend Frameworks", status: "locked" },
-    { step: 6, title: "Backend Development", status: "locked" },
-    { step: 7, title: "Database Design", status: "locked" },
-    { step: 8, title: "System Design", status: "locked" },
+  const modules = [
+    { step: 1, title: "Python Basics" },
+    { step: 2, title: "Data Structures (DSA)" },
+    { step: 3, title: "Web Basics (HTML/CSS)" },
+    { step: 4, title: "React.js Framework" },
+    { step: 5, title: "Backend (Node.js)" },
+    { step: 6, title: "Databases (SQL)" },
   ];
+  const BACKEND = "http://127.0.0.1:5000";
+  const rawUser = typeof window !== "undefined" ? localStorage.getItem("authUser") : null;
+  const authUser = rawUser ? JSON.parse(rawUser) : null;
+  const userId = authUser?.email || String(authUser?.id) || "guest";
+  const [userName, setUserName] = useState<string>("Guest");
+  const [progressMap, setProgressMap] = useState<Record<string, { completed: number; total: number }>>({});
 
-  const currentStep = roadmapSteps.find((s) => s.status === "in-progress");
+  useEffect(() => {
+    const load = async () => {
+      const next: Record<string, { completed: number; total: number }> = {};
+      for (const m of modules) {
+        const data = courseCatalog[m.title];
+        const total = data?.lessons?.length || 0;
+        try {
+          const url = `${BACKEND}/progress?user_id=${encodeURIComponent(userId)}&module_title=${encodeURIComponent(m.title)}&limit=400`;
+          const res = await fetch(url);
+          const json = await res.json();
+          const completed = (json.items || []).filter((it: any) => it.completed).length;
+          next[m.title] = { completed, total };
+        } catch {
+          next[m.title] = { completed: 0, total };
+        }
+      }
+      setProgressMap(next);
+    };
+    load();
+  }, []);
 
-  // RECOMMENDED RESOURCES
-  const resources = [
-    { num: "01", title: "JavaScript Documentation", source: "MDN" },
-    { num: "02", title: "React Official Tutorial", source: "React.dev" },
-    { num: "03", title: "Algorithms Handbook", source: "GitHub" },
-    { num: "04", title: "Web Performance Guide", source: "web.dev" },
-    { num: "05", title: "TypeScript Deep Dive", source: "Book" },
-  ];
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const q = authUser?.id ? `id=${authUser.id}` : authUser?.email ? `email=${encodeURIComponent(authUser.email)}` : "";
+        if (!q) return;
+        const res = await fetch(`${BACKEND}/user?${q}`);
+        const data = await res.json();
+        if (data?.user?.name) setUserName(data.user.name);
+      } catch {}
+    };
+    fetchUser();
+  }, []);
+
+  const roadmapSteps = modules.map((m) => {
+    const data = courseCatalog[m.title];
+    const pm = progressMap[m.title] || { completed: 0, total: data?.lessons?.length || 0 };
+    const completed = pm.completed >= pm.total && pm.total > 0;
+    const inProgress = pm.completed > 0 && pm.completed < pm.total;
+    return {
+      step: m.step,
+      title: m.title,
+      desc: data?.desc || "",
+      video: data?.video || "",
+      status: completed ? "completed" : inProgress ? "in-progress" : "locked",
+      total: pm.total,
+      done: pm.completed,
+    };
+  });
+  const allCompleted = roadmapSteps.every((s) => s.status === "completed");
+
+  
+
 
   return (
     <div className="min-h-screen bg-black text-white flex">
@@ -52,7 +100,7 @@ export default function RoadmapPage() {
             </div>
             <div className="text-right">
               <p className="text-sm text-[#888]">Welcome back,</p>
-              <p className="text-xl font-semibold">John Doe</p>
+              <p className="text-xl font-semibold">{userName}</p>
               <p className="text-sm text-[#FF6B00]">{selectedCareer} Track</p>
             </div>
           </div>
@@ -72,15 +120,16 @@ export default function RoadmapPage() {
 
               {/* LIST STEP — SUDAH BISA DIKLIK & MASUK KE COURSE */}
               <div className="mt-8 space-y-4">
-                {roadmapSteps.map((item) => {
+                {roadmapSteps.map((item, idx) => {
                   const isInProgress = item.status === "in-progress";
                   const isCompleted = item.status === "completed";
+                  const isLocked = item.status === "locked" && idx > 0 && roadmapSteps[idx - 1].status !== "completed";
 
                   return (
                     <button
                       key={item.step}
                       onClick={() => {
-                        if (isInProgress || isCompleted) {
+                        if (!isLocked) {
                           window.location.href = `/course?module=${item.step}&title=${encodeURIComponent(item.title)}`;
                         }
                       }}
@@ -90,8 +139,8 @@ export default function RoadmapPage() {
                           : isInProgress
                           ? "bg-gradient-to-r from-[#FF6B00]/10 to-transparent border-l-4 border-[#FF6B00] hover:from-[#FF6B00]/20 shadow-lg hover:shadow-xl"
                           : "bg-[#0a0a0a] opacity-60"
-                      } ${isInProgress || isCompleted ? "cursor-pointer" : "cursor-not-allowed"}`}
-                      disabled={!isInProgress && !isCompleted}
+                      } ${!isLocked ? "cursor-pointer" : "cursor-not-allowed"}`}
+                      disabled={isLocked}
                     >
                       <div className="flex items-center gap-6">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold ${
@@ -101,9 +150,10 @@ export default function RoadmapPage() {
                         }`}>
                           {item.step}
                         </div>
-                        <h3 className={`text-lg font-medium ${item.status === "locked" ? "text-[#555]" : "text-white"}`}>
-                          {item.title}
-                        </h3>
+                        <div>
+                          <h3 className={`text-lg font-medium ${isLocked ? "text-[#555]" : "text-white"}`}>{item.title}</h3>
+                          <p className="text-sm text-[#888] mt-1 max-w-xl">{item.desc}</p>
+                        </div>
                       </div>
 
                       {isCompleted && (
@@ -118,7 +168,19 @@ export default function RoadmapPage() {
                           <span className="font-bold text-sm">Continue Learning →</span>
                         </div>
                       )}
-                      {item.status === "locked" && <span className="text-[#555] text-sm">Locked</span>}
+                      <div className="flex items-center gap-3">
+                        {item.video && (
+                          <a
+                            href={item.video}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-2 rounded-lg text-sm bg-[#111] border border-white/10 hover:bg-white/5"
+                          >
+                            Watch Video
+                          </a>
+                        )}
+                        {isLocked && <span className="text-[#555] text-sm">Locked</span>}
+                      </div>
                     </button>
                   );
                 })}
@@ -127,55 +189,22 @@ export default function RoadmapPage() {
 
             {/* Sidebar Kanan */}
             <div className="w-96 space-y-8">
-              {/* Continue Path */}
-              <div className="bg-gradient-to-b from-[#FF6B00] to-[#ff9500] rounded-2xl p-8 text-black">
-                <span className="px-4 py-1 bg-black/20 rounded-full text-xs font-bold">IN PROGRESS</span>
-                <h2 className="text-2xl font-bold mt-6 mb-3">CONTINUE PATH</h2>
-                <p className="text-black/80 mb-8">{currentStep?.title}</p>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden">
-                    <div className="h-full w-[65%] bg-black rounded-full" />
-                  </div>
-                  <span className="font-bold">65%</span>
-                </div>
-              </div>
-
+              
               {/* Upcoming Assessment */}
               <div className="bg-[#0a0a0a] border-2 border-[#1a1a1a] rounded-2xl p-8">
                 <h3 className="text-sm font-bold text-[#888] mb-4">UPCOMING ASSESSMENT</h3>
                 <p className="text-[#888] text-sm leading-relaxed mb-8">
-                  Test your knowledge on Data Structures and verify your understanding
+                  {allCompleted ? "You have completed all modules. Ready to start the assessment." : "Complete all modules to unlock the assessment."}
                 </p>
-                <button className="w-full bg-[#FF6B00] hover:bg-[#ff8533] text-black font-bold py-4 rounded-xl transition">
+                <button
+                  onClick={() => { if (allCompleted) router.push("/assessments/exam"); }}
+                  disabled={!allCompleted}
+                  className={`w-full font-bold py-4 rounded-xl transition ${allCompleted ? "bg-[#FF6B00] hover:bg-[#ff8533] text-black" : "bg-[#333] text-[#888] cursor-not-allowed"}`}
+                >
                   Start Test
                 </button>
               </div>
 
-              {/* Recommended Resources */}
-              <div className="bg-gradient-to-b from-[#0a0a0a] to-transparent border border-[#1a1a1a] rounded-2xl p-8">
-                <h3 className="text-xl font-bold mb-8">Recommended Resources</h3>
-                <div className="space-y-6">
-                  {resources.map((res) => (
-                    <div
-                      key={res.num}
-                      className="flex items-center justify-between py-4 border-b border-[#1a1a1a]/50 last:border-0 hover:bg-white/5 rounded-lg transition px-2 -mx-2 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-6">
-                        <span className="text-[#FF6B00] font-bold text-lg w-8">{res.num}</span>
-                        <div>
-                          <p className="text-white font-medium">{res.title}</p>
-                          <p className="text-[#666] text-sm">{res.source}</p>
-                        </div>
-                      </div>
-                      <div className="w-5 h-5 bg-[#FF6B00]/20 rounded flex items-center justify-center">
-                        <svg className="w-3 h-3 text-[#FF6B00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
